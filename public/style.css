@@ -1,0 +1,45 @@
+#grid {
+  margin: 20px auto;
+  display: table;
+  width: 410px;
+  height: 410px;
+  padding: 0px;
+  border-collapse: collapse;
+  background: #129104;
+  border: 1px solid #0a5e01;
+  border-radius: 5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  -moz-box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  -webkit-box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+   border-spacing: 5px 5px;
+}
+
+.row {
+  display: table-row;
+}
+
+.cell {
+  display: table-cell;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #000000;
+  padding: 4px;
+}
+
+.disc {
+  width: 36px;
+  height: 36px;
+  -webkit-border-radius: 50%;
+  -moz-border-radius: 50%;
+  border-radius: 50%;
+  margin: 2px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font: 13px Helvetica, Arial; }
+form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
+form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+#messages { list-style-type: none; margin: 0; padding: 0; }
+#messages li { padding: 5px 10px; }
+#messages li:nth-child(odd) { background: #eee; }
