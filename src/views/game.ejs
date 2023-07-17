@@ -4,9 +4,10 @@
     <link rel="stylesheet" href="/css/style.css">
     <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js"></script> -->
     <script src="/socket.io/socket.io.js"></script>
+    <link rel="shortcut icon" type="image/png" href="/img/icon.png">
 </head>
 <body>
-    <div id="game_setup">
+    <!-- <div id="game_setup">
         <button type="button" onclick="create_r()">Create a room</button>
         <input type="text" id="create_room" placeholder="Enter room's name" style="display: none" />
         <button type="button" onclick="join_r()">Join a room</button>
@@ -25,10 +26,11 @@
         <input type="text" id="nickname_join" placeholder="Enter your name"/>
         <span id="error_msg_join"></span>
         <button id="joinNameBtn">Go</button>
-    </div>
+    </div> -->
 
-    <div id="game" style="display: none">
-        <h1>OTHELLO Challenge</h1>
+    <div id="game">
+        <p id="roomId"><%= roomId %></p>
+        <p>Hi <span id='playerName'><%= playerName %></span><p>
         <div id="colorTurn"></div>
         <div id="score"></div>
         <div id="grid">
@@ -124,5 +126,5 @@
     </div>
 
 </body>
-<script src="/js/script.js"></script>
+<script src="/js/game.js"></script>
 </html>
