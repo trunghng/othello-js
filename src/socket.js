@@ -1,16 +1,8 @@
-const logicHandler = require('./helpers/logic-handler')
+const { validMoves, flipDiscs, calScore } = require('./helpers/logic-handler')
 const random = require('./helpers/random')
 
-let rooms = {
-    /* roomId: {
-        players: [socketId1, socketId2],
-        readyStatus: {}
-        turn: 0/1,
-        grid: ...,
-        gameOver: true/false
-    } */
-}
-
+const WHITE = 1, BLACK = 2
+const WHITETXT = 'White', BLACKTXT = 'Black'
 const defaultGrid = [
     [0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0],
@@ -21,46 +13,45 @@ const defaultGrid = [
     [0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0]
 ]
+let rooms = {
+    /* roomId: {
+        players: [socketId1, socketId2],
+        playerNames: {socketId: playerName},
+        readyStatus: {socketId: true/false},
+        turn: 0/1,
+        grid: ...
+    } */
+}
 
 class Room {
 
-    constructor(players, readyStatus, turn, grid, gameOver) {
-        this._players = players
-        this._readyStatus = readyStatus
-        this._turn = turn
-        this._grid = grid
-        this._gameOver = gameOver
+    constructor(host, hostName) {
+        this._players = [host]
+        this._playerNames = {}
+        this._playerNames[host] = hostName
+        this._readyStatus = {}
+        this._readyStatus[host] = false
+        this._turn = undefined
+        this._grid = undefined
     }
 
     get players() {
         return this._players
     }
 
-    set_players(player, join) {
-        if (join) {
-            this._players.push(player)
-        } else {
-            this._players = this._players.filter((i) => {i !== player})
-        }
+    get playerNames() {
+        return this._playerNames
     }
 
-    get ready_status() {
-        return this._ready_status
-    }
-
-    set_ready_status(player, ready) {
-        if (ready) {
-            this._ready_status[player] = 'ready'
-        } else {
-            this._ready_status[player] = 'not ready'
-        }
+    get readyStatus() {
+        return this._readyStatus
     }
 
     get turn() {
         return this._turn
     }
 
-    set_turn(turn) {
+    set turn(turn) {
         this._turn = turn
     }
 
@@ -68,24 +59,42 @@ class Room {
         return this._grid
     }
 
-    set_grid(grid) {
+    set grid(grid) {
         this._grid = grid
     }
 
-    get game_over() {
-        return this._game_over
+    addPlayer(player, playerName) {
+        this._players.push(player)
+        this._playerNames[player] = playerName
+        this._readyStatus[player] = false
     }
 
-    set_game_over(over) {
-        this._game_over = over
+    removePlayer(player) {
+        this.players.filter(i => i !== player)
+        delete this.playerNames[player]
+        delete this.readyStatus[player]
     }
+
+    changeReadyStatus(player) {
+        this._readyStatus[player] = !this._readyStatus[player]
+    }
+
+    ready() {
+        return this.readyStatus[this.players[0]] && this.readyStatus[this.players[1]]
+    }
+
+    set(turn, grid) {
+        this.turn = turn
+        this.grid = grid
+    }
+
 }
 
 
 module.exports = (io) => {
     io.on('connection', (socket) => {
 
-        socket.on('create/join room', (data) => responseOnCreateJoinRoom(data, socket))
+        socket.on('create/join', (data) => responseOnCreateJoinRoom(data, socket))
 
         socket.on('typing', (data) => responseOnTyping(data, socket))
 
@@ -93,41 +102,244 @@ module.exports = (io) => {
 
         // socket.on('leave room', (data) => responseOnLeaveRoom(data, socket))
 
-        // socket.on('ready', (data) => responseOnReady(data, socket))
+        socket.on('ready', (data) => responseOnReady(data, socket, io))
 
-        // socket.on('move', (data) => reponseOnMove(data, socket))
+        socket.on('start', (data) => responseOnStart(data, socket, io))
 
-        // socket.on('surrender', (data) => responseOnSurrender(data, socket))
+        socket.on('move', (data) => reponseOnMove(data, socket, io))
+
+        socket.on('surrender', (data) => responseOnSurrender(data, socket, io))
     })
 }
 
 
 const responseOnCreateJoinRoom = (data, socket) => {
-    console.log(`Received a room creating/joining request with ID ${data.roomId}`)
-    socket.join(data.roomId)
+    const { roomId, playerName } = data
+    if (rooms.hasOwnProperty(roomId)) {
+        console.log(`ROOM ${roomId}| ${playerName} > join`)
+        rooms[roomId].addPlayer(socket.id, playerName)
+    } else {
+        console.log(`ROOM ${roomId}| ${playerName} > host`)
+        rooms[roomId] = new Room(socket.id, playerName)
+    }
+    socket.join(roomId)
 
-    socket.emit('create/join room', {
-        message: 'Welcome to the game!'
-    })
-
-    socket.to(data.roomId).emit('join room', {
-        message: `${data.playerName} has joined the game`
+    socket.to(roomId).emit('join', {
+        message: `${playerName} has joined the game`
     })
 }
+
 
 const responseOnTyping = (data, socket) => {
-    socket.to(data.roomId).emit('typing', {
-        message: `${data.playerName} is typing...`
+    const { roomId } = data
+    const playerName = rooms[roomId].playerNames[socket.id]
+    console.log(`ROOM ${roomId}: ${playerName} > typing`)
+
+    socket.to(roomId).emit('typing', {
+        message: `${playerName} is typing...`
     })
 }
 
-const responseOnChat = (data, socket) => {
-    console.log(`Received a message from ${data.playerName}`)
 
-    socket.to(data.roomId).emit('chat', {
-        playerName: data.playerName,
-        message: data.message
+const responseOnChat = (data, socket) => {
+    const { roomId, message } = data
+    const playerName = rooms[roomId].playerNames[socket.id]
+    console.log(`ROOM ${roomId}| ${playerName} > chat`)
+
+    socket.to(roomId).emit('chat', {
+        playerName: playerName,
+        message: message
     })
+}
+
+
+const responseOnReady = (data, socket, io) => {
+    const room = rooms[data.roomId]
+    console.log(`ROOM ${data.roomId}| ${room.playerNames[socket.id]} > ready: ${!room.readyStatus[socket.id]}`)
+    room.changeReadyStatus(socket.id)
+    if (room.ready()) {
+        // Enable the start button the host's UI
+        io.to(room.players[0]).emit('enable start')
+    } else {
+        io.to(room.players[0]).emit('disable start')
+    }
+}
+
+
+const newGame = (roomId) => {
+    rooms[roomId].set(BLACK, JSON.parse(JSON.stringify(defaultGrid)))
+    rooms[roomId].changeReadyStatus(rooms[roomId].players[0])
+    rooms[roomId].changeReadyStatus(rooms[roomId].players[1])
+}
+
+
+const responseOnStart = (data, socket, io) => {
+    const { roomId } = data
+    const room = rooms[roomId]
+
+    newGame(roomId)
+    const scoreTxt = 'WHITE 2 - 2 BLACK'
+    const playerBlack = random.randInt(2)
+    const playerWhite = 1 - playerBlack
+    const blackName = room.playerNames[room.players[playerBlack]]
+    const whiteName = room.playerNames[room.players[playerWhite]]
+
+    console.log(`ROOM ${roomId}| ${blackName} > BLACK`)
+    console.log(`ROOM ${roomId}| ${whiteName} > WHITE`)
+    console.log(`ROOM ${roomId}| GAME START`)
+
+    io.to(room.players[playerBlack]).emit('game start', {
+        player: BLACK,
+        color: BLACKTXT,
+        grid: room.grid,
+        message: `You are ${BLACKTXT}. Go first!`,
+        validMoves: Object.keys(validMoves(room.grid, BLACK)),
+        score: scoreTxt
+    })
+    io.to(room.players[playerBlack]).emit('enable move')
+
+    io.to(room.players[playerWhite]).emit('game start', {
+        player: WHITE,
+        color: WHITETXT,
+        grid: room.grid,
+        message: `You are ${WHITETXT}. Wait for opponent!`,
+        score: scoreTxt
+    })
+
+    // disable start button on the host's UI
+    io.to(room[0]).emit('disable start')
+}
+
+
+const gameOver = (grid) => {
+    const whiteValidMoves = Object.keys(validMoves(grid, WHITE))
+    const blackValidMoves = Object.keys(validMoves(grid, BLACK))
+    // console.log(`Valid moves: ${whiteValidMoves}`)
+    // console.log(`Valid moves: ${blackValidMoves}`)
+    return whiteValidMoves.length === 0 && blackValidMoves.length === 0
+}
+
+
+const reponseOnMove = (data, socket, io) => {
+    const { roomId, grid, row, col, crtPlayer } = data
+    let [crtColor, opponentColor] = (crtPlayer === WHITE) ? ['WHITE', 'BLACK'] : ['BLACK', 'WHITE']
+    let nextGrid
+
+    if (Object.keys(validMoves(grid, crtPlayer)).includes(row + '' + col)) {
+        console.log(`ROOM ${roomId}| ${crtColor} > move (${row},${col})`)
+        nextGrid = flipDiscs(rooms[roomId].grid, row, col, crtPlayer)
+
+        let score = calScore(nextGrid)
+        const scoreTxt = `WHITE ${score[0]} - ${score[1]} BLACK`
+
+        if (gameOver(nextGrid)) {
+            let draw, crtPlayerWin
+            if (score[0] == score[1]) {
+                draw = true
+                crtPlayerWin = false
+            } else {
+                draw = false
+                if ((score[0] > score[1] && crtPlayer === WHITE) || (score[0] > score[1] && crtPlayer === BLACK)) {
+                    crtPlayerWin = true
+                } else {
+                    crtPlayerWin = false
+                }
+            }
+
+            const gameOverMsg = 'Game over! Click ready to start the game!'
+            console.log(`ROOM ${roomId}| GAME OVER: ${scoreTxt}`)
+
+            if (draw) {
+                io.in(roomId).emit('game over', {
+                    grid: nextGrid,
+                    message: gameOverMsg,
+                    score: `Draw! Final Score: ${scoreTxt}`
+                })
+            } else {
+                if (crtPlayerWin) {
+                    socket.emit('game over', {
+                        grid: nextGrid,
+                        message: gameOverMsg,
+                        score: `You win! Final Score: ${scoreTxt}`
+                    })
+                    socket.to(roomId).emit('game over', {
+                        grid: nextGrid,
+                        message: gameOverMsg,
+                        score: `You lose! Final Score: ${scoreTxt}`
+                    })
+
+                } else {
+                    socket.emit('game over', {
+                        grid: nextGrid,
+                        message: gameOverMsg,
+                        score: `You lose! Final Score: ${scoreTxt}`
+                    })
+                    socket.to(roomId).emit('game over', {
+                        grid: nextGrid,
+                        message: gameOverMsg,
+                        score: `You win! Final Score: ${scoreTxt}`
+                    })
+                }
+            }
+            io.in(roomId).emit('disable move')
+        } else {
+            const opponent = 2 / crtPlayer
+            const opponentValidMoves = Object.keys(validMoves(nextGrid, opponent))
+
+            if (opponentValidMoves.length === 0) {
+                socket.emit('move', {
+                    grid: nextGrid,
+                    message: `You are ${crtColor}. ${opponentColor} has no available moves. Your turn!`,
+                    validMoves: Object.keys(validMoves(nextGrid, crtPlayer)),
+                    score: scoreTxt
+                })
+
+                socket.to(roomId).emit('move', {
+                    grid: nextGrid,
+                    message: `You are ${opponentColor}. There are no available moves. Wait for opponent!`,
+                    score: scoreTxt
+                })
+            } else {
+                console.log(`ROOM ${roomId}| Turn changed`)
+                rooms[roomId].set(opponent, nextGrid)
+
+                socket.emit('move', {
+                    grid: nextGrid,
+                    message: `You are ${crtColor}. Wait for opponent!`,
+                    score: scoreTxt
+                })
+                socket.emit('disable move')
+
+                socket.to(roomId).emit('move', {
+                    grid: nextGrid,
+                    message: `You are ${opponentColor}. Your turn!`,
+                    validMoves: opponentValidMoves,
+                    score: scoreTxt
+                })
+                socket.to(roomId).emit('enable move')
+            }
+        }
+    }
+}
+
+
+const responseOnSurrender = (data, socket, io) => {
+    const { roomId, color } = data
+    const gameOverMsg = 'Game over! Click ready to start the game!'
+    console.log(`ROOM ${roomId}| ${color} > surrender`)
+
+    socket.to(roomId).emit('game over', {
+        grid: rooms[roomId].grid,
+        message: gameOverMsg,
+        score: `${color} surrendered! You win!`
+    })
+
+    socket.emit('game over', {
+        grid: rooms[roomId].grid,
+        message: gameOverMsg,
+        score: `You surrendered! You lose!`
+    })
+    io.in(roomId).emit('disable move')
 }
 
 // function responseOnLeaveRoom(data, socket) {
@@ -152,198 +364,4 @@ const responseOnChat = (data, socket) => {
 //     socket.emit('leave successful', {})
 //     socket.leave(data.room)
 //     socket.disconnect()
-// }
-
-// const responseOnReady = (data, socket) => {
-//     console.log('Received a ready status')
-
-//     if (rooms[data.room].ready_status[socket.id] === 'ready') {
-//         console.log('A player is not ready')
-
-//         rooms[data.room].set_ready_status(socket.id, false)
-//     } else {
-//         console.log('A player is ready')
-
-//         rooms[data.room].set_ready_status(socket.id, true)
-//         if (rooms[data.room].ready_status[rooms[data.room].players[0]] === 'ready' && rooms[data.room].ready_status[rooms[data.room].players[1]] === 'ready') {
-//             console.log('Game start!')
-
-//             newGame(data.room)
-//             rooms[data.room].set_game_over(false)
-
-//             let player_black = random.randInt(2)
-
-//             io.to(rooms[data.room].players[player_black]).emit('start game', {
-//                 player: 2,
-//                 grid: rooms[data.room].grid,
-//                 message: 'You are Black, go first',
-//                 valid_moves: Object.keys(logicHandler.get_valid_moves(rooms[data.room].grid, 2)),
-//                 score: 'White: 2 - 2 :Black'
-//             })
-
-//             io.to(rooms[data.room].players[1 - player_black]).emit('start game', {
-//                 player: 1,
-//                 grid: rooms[data.room].grid,
-//                 message: "You are White, wait for opponent's move",
-//                 score: 'White: 2 - 2 :Black'
-//             })
-//         }
-//     }
-// }
-
-
-// function reponseOnMove(data, socket) {
-//     console.log('Received a checker moving request')
-
-//     var new_grid
-//     if (rooms[data.room].status === 'waiting') {
-//         return
-//     }
-//     else if (data.player === rooms[data.room].turn && Object.keys(logicHandler.get_valid_moves(data.grid, data.player)).includes(data.row + '' + data.col)) {
-//         new_grid = logicHandler.flip_discs(rooms[data.room].grid, data.row, data.col, data.player)
-//         console.log(new_grid)
-
-//         let score = logicHandler.calculate_score(new_grid)
-//         let player_color = (data.player === 1) ? 'White' : 'Black'
-//         let opponent_color = (data.player === 1) ? 'Black' : 'White'
-//         let end = gameEnded(new_grid)
-
-//         if (end) {
-//             console.log('Game over!')
-
-//             rooms[data.room].set_game_over(true)
-
-//             let draw, player_win
-//             if (score[0] == score[1]) {
-//                 draw = true
-//                 player_win = false
-//             } else if (score[0] > score[1]) { // White wins
-//                 draw = false
-//                 if (player_color === 'White') {
-//                     player_win = true
-//                 } else {
-//                     player_win = false
-//                 }
-//             } else {
-//                 draw = false
-//                 if (player_color === 'Black') {
-//                     player_win = true
-//                 } else {
-//                     player_win = false
-//                 }
-//             }
-
-//             if (draw) {
-//                 console.log('Draw')
-
-//                 io.in(data.room).emit('game over', {
-//                     grid: new_grid,
-//                     message: 'Game over! Click ready to start the game!',
-//                     score: `Draw! Final Score: White: ${score[0]} - ${score[1]} :Black`
-//                 })
-//             } else {
-//                 console.log(`Final Score: White: ${score[0]} - ${score[1]} :Black`)
-
-//                 if (player_win) {
-//                     socket.emit('game over', {
-//                         grid: new_grid,
-//                         message: 'Game over! Click ready to start the game!',
-//                         score: `You win! Final Score: White ${score[0]} - ${score[1]} :Black`
-//                     })
-
-//                     socket.to(data.room).emit('game over', {
-//                         grid: new_grid,
-//                         message: 'Game over! Click ready to start the game!',
-//                         score: `You lose! Final Score: White ${score[0]} - ${score[1]} :Black`
-//                     })
-//                 } else {
-//                     socket.emit('game over', {
-//                         grid: new_grid,
-//                         message: 'Game over! Click ready to start the game!',
-//                         score: `You lose! Final Score: White ${score[0]} - ${score[1]} :Black`
-//                     })
-
-//                     socket.to(data.room).emit('game over', {
-//                         grid: new_grid,
-//                         message: 'Game over! Click ready to start the game!',
-//                         score: `You win! Final Score: White ${score[0]} - ${score[1]} :Black`
-//                     })
-//                 }
-//             }
-//         } else {
-//             let opponent = 2 / data.player
-//             let valid_moves = Object.keys(logicHandler.get_valid_moves(new_grid, opponent))
-
-//             if ((valid_moves.length === 0)) {
-//                 socket.emit('move', {
-//                     grid: new_grid,
-//                     message: `You are ${player_color}, ${opponent_color} has no available moves, your turn!`,
-//                     valid_moves: Object.keys(logicHandler.get_valid_moves(new_grid, data.player)),
-//                     score: `White: ${score[0]} - ${score[1]} :Black`
-//                 })
-
-//                 socket.to(data.room).emit('move', {
-//                     grid: new_grid,
-//                     message: `You are ${opponent_color}, There are no available moves for you, wait for opponent's moves!`,
-//                     score: `White: ${score[0]} - ${score[1]} :Black`
-//                 })
-//             } else {
-//                 setRoom(opponent, new_grid, data.room)
-//                 console.log('Change turn')
-
-//                 socket.emit('move', {
-//                     grid: new_grid,
-//                     message: `You are ${player_color}, wait for opponent's move`,
-//                     score: `White: ${score[0]} - ${score[1]} :Black`
-//                 })
-
-//                 socket.to(data.room).emit('move', {
-//                     grid: new_grid,
-//                     message: `You are ${opponent_color}, your turn!`,
-//                     valid_moves: valid_moves,
-//                     score: `White: ${score[0]} - ${score[1]} :Black`
-//                 })
-//             }
-//         }
-//     }
-// }
-
-
-// function newGame(room) {
-//     setRoom(2, default_grid, room)
-//     let players = rooms[room].players
-//     rooms[room].set_ready_status(players[0], false)
-//     rooms[room].set_ready_status(players[1], false)
-// }
-
-
-// function setRoom(player, grid, room) {
-//     rooms[room].set_turn(player)
-//     rooms[room].set_grid(grid)
-// }
-
-
-// function gameEnded(grid) {
-//     console.log(`Valid moves: ${Object.keys(logicHandler.get_valid_moves(grid, 1))}`)
-//     console.log(`Valid moves: ${Object.keys(logicHandler.get_valid_moves(grid, 2))}`)
-//     return Object.keys(logicHandler.get_valid_moves(grid, 1)).length === 0 && Object.keys(logicHandler.get_valid_moves(grid, 2)).length === 0
-// }
-
-
-// function responseOnSurrender(data, socket) {
-//     console.log(`Received a surrender request from ${data.nickname}`)
-
-//     if (!rooms[data.room].game_over) {
-//         console.log(`Surrender request from ${data.nickname} is accepted`)
-
-//         socket.to(data.room).emit('surrender', {
-//             message: 'Game over! Click ready to start the game!',
-//             score: `${data.nickname} surrendered! You win!`
-//         })
-
-//         socket.emit('surrender', {
-//             message: 'Game over! Click ready to start the game!',
-//             score: `You surrendered! You lose!`
-//         })
-//     }
 // }

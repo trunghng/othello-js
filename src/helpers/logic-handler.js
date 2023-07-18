@@ -1,4 +1,270 @@
-const calculate_score = (grid) => {
+const validMoves = (grid, color, n=8) => {
+    let validMoves = {}
+    // color: 2 for black, 1 for white
+
+    // Diagonal from upper right to bottom left
+    for (var row = 0; row < n-2; row++) {
+        var b = -1,
+            w = -1,
+            e = -1,
+            er = -1
+        for (var col = row; col < n; col++) {
+            if (grid[col][n - 1 - col + row] == 0) {
+                er = col
+                e = n - 1 - col + row
+                if (b != -1 && w != -1) {
+                    if (!validMoves.hasOwnProperty(er + '' + e)) {
+                        validMoves[er + '' + e] = []
+                    }
+                    validMoves[er + '' + e].push('diagonal1')
+                    w = -1
+                    b = -1
+                } else if (b != -1) {
+                    b = -1
+                } else if (w != -1) {
+                    w = -1
+                }
+            } else if (grid[col][n-1 - col + row] != color) {
+                if (!(b == -1 && e == -1)) {
+                    w = n - 1 - col + row
+                }
+            } else {
+                b = n - 1 - col + row
+                if (e != -1 && w != -1) {
+                    if (!validMoves.hasOwnProperty(er + '' + e)) {
+                        validMoves[er + '' + e] = []
+                    }
+                    validMoves[er + '' + e].push('diagonal1')
+                    e = -1
+                    w = -1
+                } else if (e != -1) {
+                    e = -1
+                } else if (w != -1) {
+                    w = -1
+                }
+            }
+        }
+    }
+
+    for (var col = 2; col < n; col++) {
+        var b = -1,
+            w = -1,
+            e = -1,
+            er = -1
+        for (var row = 0; row <= col; row++) {
+            if (grid[row][col - row] == 0) {
+                er = row
+                e = col - row
+                if (b != -1 && w != -1) {
+                    if (!validMoves.hasOwnProperty(er + '' + e)) {
+                        validMoves[er + '' + e] = []
+                    }
+                    validMoves[er + '' + e].push('diagonal1')
+                    w = -1
+                    b = -1
+                } else if (b != -1) {
+                    b = -1
+                } else if (w != -1) {
+                    w = -1
+                }
+            } else if (grid[row][col - row] != color) {
+                if (!(b == -1 && e == -1)) {
+                    w = col - row
+                }
+            } else {
+                b = col - row
+                if (e != -1 && w != -1) {
+                    if (!validMoves.hasOwnProperty(er + '' + e)) {
+                        validMoves[er + '' + e] = []
+                    }
+                    validMoves[er + '' + e].push('diagonal1')
+                    e = -1
+                    w = -1
+                } else if (e != -1) {
+                    e = -1
+                } else if (w != -1) {
+                    w = -1
+                }
+            }
+        }
+    }
+
+    // Diagonal from upper left to bottom right
+    for (var col = 0; col < n-2; col++) {
+        var b = -1,
+            w = -1,
+            e = -1,
+            er = -1
+        for (var row = 0; row < n - col; row++) {
+            if (grid[row][row + col] == 0) {
+                er = row
+                e = row + col
+                if (b != -1 && w != -1) {
+                    if (!validMoves.hasOwnProperty(er + '' + e)) {
+                        validMoves[er + '' + e] = []
+                    }
+                    validMoves[er + '' + e].push('diagonal2')
+                    w = -1
+                    b = -1
+                } else if (b != -1) {
+                    b = -1
+                } else if (w != -1) {
+                    w = -1
+                }
+            } else if (grid[row][row + col] != color) {
+                if (!(b == -1 && e == -1)) {
+                    w = row + col
+                }
+            } else {
+                b = row + col
+                if (e != -1 && w != -1) {
+                    if (!validMoves.hasOwnProperty(er + '' + e)) {
+                        validMoves[er + '' + e] = []
+                    }
+                    validMoves[er + '' + e].push('diagonal2')
+                    e = -1
+                    w = -1
+                } else if (e != -1) {
+                    e = -1
+                } else if (w != -1) {
+                    w = -1
+                }
+            }
+        }
+    }
+
+    for (var row = 0; row < n-2; row++) {
+        var b = -1,
+            w = -1,
+            e = -1,
+            er = -1
+        for (var col = 0; col < n - row; col++) {
+            if (grid[row + col][col] == 0) {
+                er = row + col
+                e = col
+                if (b != -1 && w != -1) {
+                    if (!validMoves.hasOwnProperty(er + '' + e)) {
+                        validMoves[er + '' + e] = []
+                    }
+                    validMoves[er + '' + e].push('diagonal2')
+                    w = -1
+                    b = -1
+                } else if (b != -1) {
+                    b = -1
+                } else if (w != -1) {
+                    w = -1
+                }
+            } else if (grid[row + col][col] != color) {
+                if (!(b == -1 && e == -1)) {
+                    w = col
+                }
+            } else {
+                b = col
+                if (e != -1 && w != -1) {
+                    if (!validMoves.hasOwnProperty(er + '' + e)) {
+                        validMoves[er + '' + e] = []
+                    }
+                    validMoves[er + '' + e].push('diagonal2')
+                    e = -1
+                    w = -1
+                } else if (e != -1) {
+                    e = -1
+                } else if (w != -1) {
+                    w = -1
+                }
+            }
+        }
+    }
+
+    // Horzontal
+    for (var row = 0; row < n; row++) {
+        var b = -1,
+            w = -1,
+            e = -1
+        for (var col = 0; col < n; col++) {
+            if (grid[row][col] == 0) {
+                e = col
+                if (b != -1 && w != -1) {
+                    if (!validMoves.hasOwnProperty(row + '' + e)) {
+                        validMoves[row + '' + e] = []
+                    }
+                    validMoves[row + '' + e].push('horizontal')
+                    w = -1
+                    b = -1
+                } else if (b != -1) {
+                    b = -1
+                } else if (w != -1) {
+                    w = -1
+                }
+            } else if (grid[row][col] != color) {
+                if (!(b == -1 && e == -1)) {
+                    w = col
+                }
+            } else {
+                b = col
+                if (e != -1 && w != -1) {
+                    if (!validMoves.hasOwnProperty(row + '' + e)) {
+                        validMoves[row + '' + e] = []
+                    }
+                    validMoves[row + '' + e].push('horizontal')
+                    e = -1
+                    w = -1
+                } else if (e != -1) {
+                    e = -1
+                } else if (w != -1) {
+                    w = -1
+                }
+            }
+        }
+    }
+
+    // Vertical
+    for (var col = 0; col < n; col++) {
+        var b = -1,
+            w = -1,
+            e = -1
+        for (var row = 0; row < n; row++) {
+            if (grid[row][col] == 0) {
+                e = row
+                if (b != -1 && w != -1) {
+                    if (!validMoves.hasOwnProperty(e + '' + col)) {
+                        validMoves[e + '' + col] = []
+                    }
+                    validMoves[e + '' + col].push('vertical')
+                    w = -1
+                    b = -1
+                } else if (b != -1) {
+                    b = -1
+                } else if (w != -1) {
+                    w = -1
+                }
+            } else if (grid[row][col] != color) {
+                if (!(b == -1 && e == -1)) {
+                    w = row
+                }
+            } else {
+                b = row
+                if (e != -1 && w != -1) {
+                    if (!validMoves.hasOwnProperty(e + '' + col)) {
+                        validMoves[e + '' + col] = []
+                    }
+                    validMoves[e + '' + col].push('vertical')
+                    e = -1
+                    w = -1
+                } else if (e != -1) {
+                    e = -1
+                } else if (w != -1) {
+                    w = -1
+                }
+            }
+        }
+    }
+
+    return validMoves
+}
+
+
+const calScore = (grid) => {
     let black = 0,
         white = 0
     grid.forEach((row) => {
@@ -13,13 +279,14 @@ const calculate_score = (grid) => {
     return [white, black]
 }
 
-const flip_discs = (grid, row, col, color) => {
-    let opponent_color = 2 / color
+
+const flipDiscs = (grid, row, col, color, n=8) => {
+    let opponentColor = 2 / color
     if (grid[row][col] == 0) {
-        let move_types = get_valid_moves(grid, color)[row + '' + col]
-        if (move_types != undefined) {
-            move_types.forEach((type) => {
-                console.log(type)
+        let moveTypes = validMoves(grid, color)[row + '' + col]
+        if (moveTypes != undefined) {
+            moveTypes.forEach((type) => {
+                // console.log(type)
                 grid[row][col] = color
 
                 // upper right to bottom left
@@ -28,8 +295,8 @@ const flip_discs = (grid, row, col, color) => {
                         pc = col - 1,
                         or = -1,
                         oc = -1
-                    while (pr < 8 && pc >= 0) {
-                        if (grid[pr][pc] == opponent_color) {
+                    while (pr < n && pc >= 0) {
+                        if (grid[pr][pc] == opponentColor) {
                             or = pr
                             oc = pc
                         } else if (grid[pr][pc] == color) {
@@ -43,7 +310,7 @@ const flip_discs = (grid, row, col, color) => {
                         pc--
                     }
 
-                    if (oc > 0 && or < 7) {
+                    if (oc > 0 && or < n-1) {
                         if (grid[or + 1][oc - 1] == color) {
                             let ir = or,
                                 ic = oc
@@ -56,8 +323,8 @@ const flip_discs = (grid, row, col, color) => {
                     }
 
                     pr = row - 1, pc = col + 1, or = -1, oc = -1
-                    while (pc < 8 && pr >= 0) {
-                        if (grid[pr][pc] == opponent_color) {
+                    while (pc < n && pr >= 0) {
+                        if (grid[pr][pc] == opponentColor) {
                             or = pr
                             oc = pc
                         } else if (grid[pr][pc] == color) {
@@ -71,7 +338,7 @@ const flip_discs = (grid, row, col, color) => {
                         pc++
                     }
 
-                    if (or > 0 && oc < 7) {
+                    if (or > 0 && oc < n-1) {
                         if (grid[or - 1][oc + 1] == color) {
                             let ir = or,
                                 ic = oc
@@ -83,14 +350,14 @@ const flip_discs = (grid, row, col, color) => {
                         }
                     }
 
-                    // upper left to bottom right
+                // upper left to bottom right
                 } else if (type === 'diagonal2') {
                     let pr = row + 1,
                         pc = col + 1,
                         or = -1,
                         oc = -1
-                    while (pr < 8 && pc < 8) {
-                        if (grid[pr][pc] == opponent_color) {
+                    while (pr < n && pc < n) {
+                        if (grid[pr][pc] == opponentColor) {
                             or = pr
                             oc = pc
                         } else if (grid[pr][pc] == color) {
@@ -104,7 +371,7 @@ const flip_discs = (grid, row, col, color) => {
                         pc++
                     }
 
-                    if (or > 0 && or < 7) {
+                    if (or > 0 && or < n-1) {
                         if (grid[or + 1][oc + 1] == color) {
                             let ir = or,
                                 ic = oc
@@ -118,7 +385,7 @@ const flip_discs = (grid, row, col, color) => {
 
                     pr = row - 1, pc = col - 1, or = -1, oc = -1
                     while (pr >= 0 && pc >= 0) {
-                        if (grid[pr][pc] == opponent_color) {
+                        if (grid[pr][pc] == opponentColor) {
                             or = pr
                             oc = pc
                         } else if (grid[pr][pc] == color) {
@@ -132,7 +399,7 @@ const flip_discs = (grid, row, col, color) => {
                         pc--
                     }
 
-                    if (or > 0 && or < 7) {
+                    if (or > 0 && or < n-1) {
                         if (grid[or - 1][oc - 1] == color) {
                             let ir = or,
                                 ic = oc
@@ -144,11 +411,11 @@ const flip_discs = (grid, row, col, color) => {
                         }
                     }
 
-                    // vertical
+                // vertical
                 } else if (type === 'vertical') {
                     let op = -1
                     for (var i = row - 1; i >= 0; i--) {
-                        if (grid[i][col] == opponent_color) {
+                        if (grid[i][col] == opponentColor) {
                             op = i
                         } else if (grid[i][col] == color) {
                             break
@@ -164,8 +431,8 @@ const flip_discs = (grid, row, col, color) => {
                     }
 
                     op = -1
-                    for (var i = row + 1; i < 8; i++) {
-                        if (grid[i][col] == opponent_color) {
+                    for (var i = row + 1; i < n; i++) {
+                        if (grid[i][col] == opponentColor) {
                             op = i
                         } else if (grid[i][col] == color) {
                             break
@@ -174,17 +441,17 @@ const flip_discs = (grid, row, col, color) => {
                             break
                         }
                     }
-                    if (op > 0 && op < 7 && grid[op + 1][col] == color) {
+                    if (op > 0 && op < n-1 && grid[op + 1][col] == color) {
                         for (var i = row + 1; i <= op; i++) {
                             grid[i][col] = color
                         }
                     }
 
-                    // horizontal
+                // horizontal
                 } else {
                     let op = -1
                     for (var i = col - 1; i >= 0; i--) {
-                        if (grid[row][i] == opponent_color) {
+                        if (grid[row][i] == opponentColor) {
                             op = i
                         } else if (grid[row][i] == color) {
                             break
@@ -200,8 +467,8 @@ const flip_discs = (grid, row, col, color) => {
                     }
 
                     op = -1
-                    for (var i = col + 1; i < 8; i++) {
-                        if (grid[row][i] == opponent_color) {
+                    for (var i = col + 1; i < n; i++) {
+                        if (grid[row][i] == opponentColor) {
                             op = i
                         } else if (grid[row][i] == color) {
                             break
@@ -210,7 +477,7 @@ const flip_discs = (grid, row, col, color) => {
                             break
                         }
                     }
-                    if (op > 0 && op < 7 && grid[row][op + 1] == color) {
+                    if (op > 0 && op < n-1 && grid[row][op + 1] == color) {
                         for (var i = col + 1; i <= op; i++) {
                             grid[row][i] = color
                         }
@@ -219,277 +486,9 @@ const flip_discs = (grid, row, col, color) => {
             })
         }
     }
-
     return grid
 }
 
-function get_valid_moves(grid, color) {
-    let valid_moves = {}
-    // color: 2 for black, 1 for white
-
-    // Diagonal from upper right to bottom left
-    for (var row = 0; row < 6; row++) {
-        var b = -1,
-            w = -1,
-            e = -1,
-            er = -1
-        for (var col = row; col < 8; col++) {
-            if (grid[col][7 - col + row] == 0) {
-                er = col
-                e = 7 - col + row
-                if (b != -1 && w != -1) {
-                    if (!valid_moves.hasOwnProperty(er + '' + e)) {
-                        valid_moves[er + '' + e] = []
-                    }
-                    valid_moves[er + '' + e].push('diagonal1')
-                    w = -1
-                    b = -1
-                } else if (b != -1) {
-                    b = -1
-                } else if (w != -1) {
-                    w = -1
-                }
-            } else if (grid[col][7 - col + row] != color) {
-                if (!(b == -1 && e == -1)) {
-                    w = 7 - col + row
-                }
-            } else {
-                b = 7 - col + row
-                if (e != -1 && w != -1) {
-                    if (!valid_moves.hasOwnProperty(er + '' + e)) {
-                        valid_moves[er + '' + e] = []
-                    }
-                    valid_moves[er + '' + e].push('diagonal1')
-                    e = -1
-                    w = -1
-                } else if (e != -1) {
-                    e = -1
-                } else if (w != -1) {
-                    w = -1
-                }
-            }
-        }
-    }
-
-    for (var col = 2; col < 8; col++) {
-        var b = -1,
-            w = -1,
-            e = -1,
-            er = -1
-        for (var row = 0; row <= col; row++) {
-            if (grid[row][col - row] == 0) {
-                er = row
-                e = col - row
-                if (b != -1 && w != -1) {
-                    if (!valid_moves.hasOwnProperty(er + '' + e)) {
-                        valid_moves[er + '' + e] = []
-                    }
-                    valid_moves[er + '' + e].push('diagonal1')
-                    w = -1
-                    b = -1
-                } else if (b != -1) {
-                    b = -1
-                } else if (w != -1) {
-                    w = -1
-                }
-            } else if (grid[row][col - row] != color) {
-                if (!(b == -1 && e == -1)) {
-                    w = col - row
-                }
-            } else {
-                b = col - row
-                if (e != -1 && w != -1) {
-                    if (!valid_moves.hasOwnProperty(er + '' + e)) {
-                        valid_moves[er + '' + e] = []
-                    }
-                    valid_moves[er + '' + e].push('diagonal1')
-                    e = -1
-                    w = -1
-                } else if (e != -1) {
-                    e = -1
-                } else if (w != -1) {
-                    w = -1
-                }
-            }
-        }
-    }
-
-    // Diagonal from upper left to bottom right
-    for (var col = 0; col < 6; col++) {
-        var b = -1,
-            w = -1,
-            e = -1,
-            er = -1
-        for (var row = 0; row < 8 - col; row++) {
-            if (grid[row][row + col] == 0) {
-                er = row
-                e = row + col
-                if (b != -1 && w != -1) {
-                    if (!valid_moves.hasOwnProperty(er + '' + e)) {
-                        valid_moves[er + '' + e] = []
-                    }
-                    valid_moves[er + '' + e].push('diagonal2')
-                    w = -1
-                    b = -1
-                } else if (b != -1) {
-                    b = -1
-                } else if (w != -1) {
-                    w = -1
-                }
-            } else if (grid[row][row + col] != color) {
-                if (!(b == -1 && e == -1)) {
-                    w = row + col
-                }
-            } else {
-                b = row + col
-                if (e != -1 && w != -1) {
-                    if (!valid_moves.hasOwnProperty(er + '' + e)) {
-                        valid_moves[er + '' + e] = []
-                    }
-                    valid_moves[er + '' + e].push('diagonal2')
-                    e = -1
-                    w = -1
-                } else if (e != -1) {
-                    e = -1
-                } else if (w != -1) {
-                    w = -1
-                }
-            }
-        }
-    }
-
-    for (var row = 0; row < 6; row++) {
-        var b = -1,
-            w = -1,
-            e = -1,
-            er = -1
-        for (var col = 0; col < 8 - row; col++) {
-            if (grid[row + col][col] == 0) {
-                er = row + col
-                e = col
-                if (b != -1 && w != -1) {
-                    if (!valid_moves.hasOwnProperty(er + '' + e)) {
-                        valid_moves[er + '' + e] = []
-                    }
-                    valid_moves[er + '' + e].push('diagonal2')
-                    w = -1
-                    b = -1
-                } else if (b != -1) {
-                    b = -1
-                } else if (w != -1) {
-                    w = -1
-                }
-            } else if (grid[row + col][col] != color) {
-                if (!(b == -1 && e == -1)) {
-                    w = col
-                }
-            } else {
-                b = col
-                if (e != -1 && w != -1) {
-                    if (!valid_moves.hasOwnProperty(er + '' + e)) {
-                        valid_moves[er + '' + e] = []
-                    }
-                    valid_moves[er + '' + e].push('diagonal2')
-                    e = -1
-                    w = -1
-                } else if (e != -1) {
-                    e = -1
-                } else if (w != -1) {
-                    w = -1
-                }
-            }
-        }
-    }
-
-    // Horzontal
-    for (var row = 0; row < 8; row++) {
-        var b = -1,
-            w = -1,
-            e = -1
-        for (var col = 0; col < 8; col++) {
-            if (grid[row][col] == 0) {
-                e = col
-                if (b != -1 && w != -1) {
-                    if (!valid_moves.hasOwnProperty(row + '' + e)) {
-                        valid_moves[row + '' + e] = []
-                    }
-                    valid_moves[row + '' + e].push('horizontal')
-                    w = -1
-                    b = -1
-                } else if (b != -1) {
-                    b = -1
-                } else if (w != -1) {
-                    w = -1
-                }
-            } else if (grid[row][col] != color) {
-                if (!(b == -1 && e == -1)) {
-                    w = col
-                }
-            } else {
-                b = col
-                if (e != -1 && w != -1) {
-                    if (!valid_moves.hasOwnProperty(row + '' + e)) {
-                        valid_moves[row + '' + e] = []
-                    }
-                    valid_moves[row + '' + e].push('horizontal')
-                    e = -1
-                    w = -1
-                } else if (e != -1) {
-                    e = -1
-                } else if (w != -1) {
-                    w = -1
-                }
-            }
-        }
-    }
-
-    // Vertical
-    for (var col = 0; col < 8; col++) {
-        var b = -1,
-            w = -1,
-            e = -1
-        for (var row = 0; row < 8; row++) {
-            if (grid[row][col] == 0) {
-                e = row
-                if (b != -1 && w != -1) {
-                    if (!valid_moves.hasOwnProperty(e + '' + col)) {
-                        valid_moves[e + '' + col] = []
-                    }
-                    valid_moves[e + '' + col].push('vertical')
-                    w = -1
-                    b = -1
-                } else if (b != -1) {
-                    b = -1
-                } else if (w != -1) {
-                    w = -1
-                }
-            } else if (grid[row][col] != color) {
-                if (!(b == -1 && e == -1)) {
-                    w = row
-                }
-            } else {
-                b = row
-                if (e != -1 && w != -1) {
-                    if (!valid_moves.hasOwnProperty(e + '' + col)) {
-                        valid_moves[e + '' + col] = []
-                    }
-                    valid_moves[e + '' + col].push('vertical')
-                    e = -1
-                    w = -1
-                } else if (e != -1) {
-                    e = -1
-                } else if (w != -1) {
-                    w = -1
-                }
-            }
-        }
-    }
-
-    return valid_moves
-}
-
 module.exports = {
-    get_valid_moves,
-    flip_discs,
-    calculate_score
+    validMoves, flipDiscs, calScore
 }
